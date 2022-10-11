@@ -1,21 +1,24 @@
 const expect = require('chai').expect;
 import memoize from './memoizaton';
 // hint: use https://sinonjs.org/releases/v6.1.5/fake-timers/ for faking timeouts
+const useFakeTimers = require('sinon').useFakeTimers;
 
 describe('memoization', function () {
+  // test basic functionality and expiry
   it('should memoize function result', () => {
     let returnValue = 5;
     const testFunction = (key) => returnValue;
     // const testFunction = (key) => returnValue;
-
+    const clock = useFakeTimers();
     const memoized = memoize(testFunction, (key) => key, 1000);
     expect(memoized('c544d3ae-a72d-4755-8ce5-d25db415b776')).to.equal(5);
-
     returnValue = 10;
-
-    // TODO currently fails, should work after implementing the memoize function, it should also work with other
-    // types then strings, if there are limitations to which types are possible please state them
+    clock.tick(900);
+    // 900 < 1000 -> still cached -> === 5
     expect(memoized('c544d3ae-a72d-4755-8ce5-d25db415b776')).to.equal(5);
+    clock.tick(101);
+    // 1001 > 1000 -> cache cleared -> === 10 (new computation with new returnValue)
+    expect(memoized('c544d3ae-a72d-4755-8ce5-d25db415b776')).to.equal(10);
   });
 
   // single number input

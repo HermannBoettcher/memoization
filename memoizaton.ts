@@ -26,24 +26,29 @@
  * @param timeout   timeout for cached values in milliseconds
  */
 
+import { clearInterval } from "timers";
+
 export type MemoizeFunction<T extends any> = (...args: T[]) => any;
 
 export function memoize(
   func: MemoizeFunction<any>,
   resolver: (...args: any[]) => any,
-  timeout: number
+  timeout?: number
 ) {
   // TODO implement the memoize function
-  const memo: { [key in string]: any } = {};
-  return function memoized(...args) {
-    const key = resolver(...args);
-    console.log('test resolver', resolver, key)
-    if (key in memo) return memo[key];
-    memo[key] = func(...args);
-    return memo[key];
-  };
+  let cache: { [key in string]: any } = {};
+  let timerId
 
-  return func;
+  return (...args) => {
+    timerId = setTimeout(() => {
+      cache = {}
+      clearInterval(timerId)
+    }, typeof timeout === 'number' ? timeout : 2000) // set default to setTimeout default 2000 ms
+    const key = resolver(...args);
+    if (key in cache) return cache[key];
+    cache[key] = func(...args);
+    return cache[key];
+  };
 }
 
 export default memoize;
