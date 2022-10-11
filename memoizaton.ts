@@ -26,28 +26,33 @@
  * @param timeout   timeout for cached values in milliseconds
  */
 
-import { clearInterval } from "timers";
+import { clearInterval } from 'timers';
 
 export type MemoizeFunction<T extends any> = (...args: T[]) => any;
 
 export function memoize(
   func: MemoizeFunction<any>,
   resolver: (...args: any[]) => any,
-  timeout?: number
+  timeout?: number,
+  debug?: boolean
 ) {
   // TODO implement the memoize function
   let cache: { [key in string]: any } = {};
-  let timerId
+  let timerId: NodeJS.Timeout;
 
   return (...args) => {
-    timerId = setTimeout(() => {
-      cache = {}
-      clearInterval(timerId)
-    }, typeof timeout === 'number' ? timeout : 2000) // set default to setTimeout default 2000 ms
+    timerId = setTimeout(
+      () => {
+        cache = {};
+        clearInterval(timerId);
+      },
+      typeof timeout === 'number' ? timeout : 2000
+    ); // set default to setTimeout default 2000 ms
     const key = resolver(...args);
-    if (key in cache) return cache[key];
+    if (key in cache)
+      return debug ? { res: cache[key], cached: true } : cache[key];
     cache[key] = func(...args);
-    return cache[key];
+    return debug ? { res: cache[key], cached: false } : cache[key];
   };
 }
 
