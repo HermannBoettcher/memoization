@@ -31,24 +31,24 @@ import { clearInterval } from 'timers';
 export type MemoizeFunction<T extends any> = (...args: T[]) => any;
 
 export function memoize(
-  func: MemoizeFunction<any>,
-  resolver: (...args: any[]) => any,
-  timeout?: number,
-  debug?: boolean
+  func: MemoizeFunction<any>, // the function to cache
+  resolver: (...args: any[]) => any, // resolves the key under which results are saved to the cache
+  timeout?: number, // timeout set for the cache (default will be 2000 ms)
+  debug?: boolean // for information on cache status - will return {res: any, cached: boolean}
 ) {
-  // TODO implement the memoize function
   let cache: { [key in string]: any } = {};
   let timerId: NodeJS.Timeout;
 
   return (...args) => {
+    // clear cache after timeout
+    const key = resolver(...args);
     timerId = setTimeout(
       () => {
-        cache = {};
+        delete cache[key];
         clearInterval(timerId);
       },
       typeof timeout === 'number' ? timeout : 2000
-    ); // set default to setTimeout default 2000 ms
-    const key = resolver(...args);
+    );
     if (key in cache)
       return debug ? { res: cache[key], cached: true } : cache[key];
     cache[key] = func(...args);
