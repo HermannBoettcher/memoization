@@ -33,7 +33,7 @@ export type MemoizeFunction<T extends any> = (...args: T[]) => any;
 
 export function memoize(
   func: (...args: any) => any, // the function to cache
-  resolver: (...args: any[]) => string, // resolves the key under which results are saved to the cache
+  resolver: (...args: any) => any, // resolves the key under which results are saved to the cache
   // could simply standardize by using JSON.stringify(args) !? no need for a resolver then
   timeout?: number, // timeout set for the cache (default will be 2000 ms)
   debug?: boolean // for information on cache status - will return {res: any, cached: boolean}
@@ -46,7 +46,7 @@ export function memoize(
 
   return async (...args) => {
     // compute key
-    const key = resolver(...args);
+    const key = String(resolver(...args));
     // check if the function to memoize returns a promise
     const returnsPromise =
       func.constructor.name === 'AsyncFunction' ||

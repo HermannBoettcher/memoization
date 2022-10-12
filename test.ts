@@ -14,9 +14,9 @@ describe('memoization', function () {
     key,
     timeout,
   }: {
-    func: (...args: any[]) => any;
-    args: any[];
-    key: (...args: any[]) => string;
+    func: (...args: any) => any;
+    args: any;
+    key: (...args: any) => any;
     timeout?: number;
   }) => {
     it('should memoize function result', () => {
