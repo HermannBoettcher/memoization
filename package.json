@@ -16,7 +16,8 @@
     "lodash": "^4.17.21",
     "mocha": "^5.2.0",
     "sinon": "^6.1.5",
-    "ts-node": "^10.9.1"
+    "ts-node": "^10.9.1",
+    "util": "^0.12.4"
   },
   "description": "A general introduction into memoization: https://en.wikipedia.org/wiki/Memoization",
   "bugs": {

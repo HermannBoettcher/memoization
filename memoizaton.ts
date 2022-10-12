@@ -26,22 +26,71 @@
  * @param timeout   timeout for cached values in milliseconds
  */
 
+const util = require('util');
 import { clearInterval } from 'timers';
 
 export type MemoizeFunction<T extends any> = (...args: T[]) => any;
 
 export function memoize(
-  func: MemoizeFunction<any>, // the function to cache
-  resolver: (...args: any[]) => any, // resolves the key under which results are saved to the cache
+  func: (...args: any) => any, // the function to cache
+  resolver: (...args: any[]) => string, // resolves the key under which results are saved to the cache
+  // could simply standardize by using JSON.stringify(args) !? no need for a resolver then
   timeout?: number, // timeout set for the cache (default will be 2000 ms)
   debug?: boolean // for information on cache status - will return {res: any, cached: boolean}
 ) {
   let cache: { [key in string]: any } = {};
   let timerId: NodeJS.Timeout;
+  let status: { [key in string]: 'pending' | 'fulfilled' | 'error' } = {};
+  let resolves = [];
+  let rejects = [];
 
-  return (...args) => {
-    // clear cache after timeout
+  return async (...args) => {
+    // compute key
     const key = resolver(...args);
+    // check if the function to memoize returns a promise
+    const returnsPromise =
+      func.constructor.name === 'AsyncFunction' ||
+      (typeof func === 'function' && util.types.isPromise(func(...args)));
+
+    // handle functions returning promises
+    if (returnsPromise) {
+      if (cache[key]) return Promise.resolve(cache[key]);
+      if (status[key] === 'pending')
+        return new Promise((_res, _rej) => {
+          resolves.push(_res);
+          rejects.push(_rej);
+        });
+      try {
+        status[key] = 'pending';
+        const result = await func(...args);
+        status[key] = 'fulfilled';
+        cache[key] = function get() {
+          // clear cache after timeout
+          timerId = setTimeout(() => {
+            delete cache[key];
+            delete status[key];
+            resolves = [].slice();
+            rejects = [].slice();
+            clearInterval(timerId);
+          }, timeout);
+          return debug ? { res: result, cached: false } : result;
+        };
+        resolves.forEach((res) => res(result));
+      } catch (err) {
+        status[key] = 'error';
+        rejects.forEach((rej) => rej(err));
+        throw err;
+      }
+
+      return debug ? { res: cache[key], cached: true } : cache[key];
+    }
+
+    // handle regular functions
+    if (key in cache)
+      return debug ? { res: cache[key], cached: true } : cache[key];
+
+    cache[key] = func(...args);
+    // clear cache after timeout
     timerId = setTimeout(
       () => {
         delete cache[key];
@@ -49,9 +98,6 @@ export function memoize(
       },
       typeof timeout === 'number' ? timeout : 2000
     );
-    if (key in cache)
-      return debug ? { res: cache[key], cached: true } : cache[key];
-    cache[key] = func(...args);
     return debug ? { res: cache[key], cached: false } : cache[key];
   };
 }

@@ -3,6 +3,8 @@ import memoize from './memoizaton';
 // hint: use https://sinonjs.org/releases/v6.1.5/fake-timers/ for faking timeouts
 const useFakeTimers = require('sinon').useFakeTimers;
 const sum = require('lodash').sum;
+const isEqual = require('lodash').isEqual;
+const isPromise = require('util').types.isPromise;
 
 describe('memoization', function () {
   // generic testing for validity and caching
@@ -14,7 +16,7 @@ describe('memoization', function () {
   }: {
     func: (...args: any[]) => any;
     args: any[];
-    key: (...args: any[]) => any;
+    key: (...args: any[]) => string;
     timeout?: number;
   }) => {
     it('should memoize function result', () => {
@@ -23,17 +25,20 @@ describe('memoization', function () {
       const memoized = memoize(func, key, timeout, true);
       // directly compute 'correct' answer
       const res = func(...args);
+      let expected;
+      if (isPromise(res)) {
+        res.then((res) => (expected = res));
+      } else {
+        expected = res;
+      }
 
       // check result and cache status
-      const testResult = (key, cached: boolean) => {
-        const result = memoized(key);
-        if (res instanceof Date) {
-          expect(result.res.getTime()).to.equal(res.getTime());
-        } else if (typeof res === 'object')
-          expect(JSON.stringify(result.res)).to.equal(JSON.stringify(res));
-        else expect(result.res).to.equal(res);
-        expect(result.cached).to.equal(cached);
-      };
+      const testResult = (key, cached: boolean) =>
+        memoized(key).then((memo) => {
+          // use lodash deep comparison to also verify dates, nested objects, ...
+          expect(isEqual(memo.res, expected)).to.equal(true);
+          expect(memo.cached).to.equal(cached);
+        });
 
       // initial result
       testResult(key(...args), false);
@@ -71,6 +76,18 @@ describe('memoization', function () {
   // multiple any inputs (const)
   testFunction({
     func: (a, b, c, d) => 'hello world',
+    args: ['hi', 0, {}, undefined],
+    key: (...args) => args.map((e) => String(e)).join('_'),
+  });
+
+  // promise return -> will
+  testFunction({
+    func: (a, b, c, d) =>
+      new Promise((resolve, reject) => {
+        setTimeout(() => {
+          resolve(false);
+        }, 3000);
+      }),
     args: ['hi', 0, {}, undefined],
     key: (...args) => args.map((e) => String(e)).join('_'),
   });
